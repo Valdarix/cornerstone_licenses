@@ -69,7 +69,7 @@ lib.callback.register('cornerstone_licenses:server:inquire', function(source, li
 
             hasCash = exports.ox_inventory:GetItemCount(src, 'money')
 
-            canPay = hasCash > 5000
+            canPay = hasCash >= 5000
 
             if canPay then
                 

@@ -38,9 +38,7 @@ function OpenBuyMenu(loc)
     local availableLicenses = lib.callback.await('cornerstone_licenses:server:getLicenseTypes', false, loc.name)
    
     local menu = {}
-    for i = 1, #availableLicenses  do
-        local currentItem = availableLicenses[i].name
-        local itemPayoutAmount = availableLicenses[i].amount
+    for i = 1, #availableLicenses  do     
         menu[#menu + 1] = {                  
             title = availableLicenses[i].label,
             description = availableLicenses[i].description .. ' - $' .. availableLicenses[i].cost,          
@@ -116,7 +114,7 @@ UpdateLicensePeds()
 
 Citizen.CreateThread(function()
     while true do
-        Citizen.Wait(30000) 
+        Citizen.Wait(300000) 
         UpdateLicensePeds()
     end
 end)
