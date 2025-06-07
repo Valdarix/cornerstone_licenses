@@ -1,4 +1,5 @@
 local pedEntities = {} 
+local blip = 0
 
 local function sendNotify(notifyType, message)
     exports.qbx_core:Notify('Background Check', notifyType, 5000, message, 'center-right')
@@ -17,7 +18,7 @@ local function LoadModel(model)
     while not HasModelLoaded(model) do
         Wait(0)
         if GetGameTimer() - startTime > 5000 then
-            DebugPrint("ERROR: Model load timeout:" .. " " .. model)
+            
             break
         end
     end
@@ -64,25 +65,15 @@ end
 
 
 local function UpdateLicensePeds()
-    for i = 1, #Config.Locations do
-        if pedEntities and pedEntities[i] then
-            exports.ox_target:removeLocalEntity(pedEntities[i])
-            DeleteEntity(pedEntities[i])
-        end
-    end    
-
-    if not pedEntities then pedEntities = {} end
+    if not pedEntities then pedEntities = {} end    
     
-    -- Your existing code to create peds based on cop count
     for i = 1, #Config.Locations do
         local locationSettings = lib.callback.await('cornerstone_licenses:server:getLicenseTypes', false, Config.Locations[i].name)
         local copCount = lib.callback.await('cornerstone_licenses:server:getCopCount', false, 'leo')
-        print('copCount: ' .. locationSettings[1].cop_count)
-        print('locationSettings: ' .. json.encode(locationSettings))
-
-        local canSell = copCount <= locationSettings[i].cop_count
-        print('canSell: ' .. tostring(canSell))
-        if canSell then
+    
+        local canSell = copCount <= locationSettings[i].cop_count            
+      
+        if canSell and not pedEntities[i] then
             local loc = Config.Locations[i]
             LoadModel(loc.pedModel)
             
@@ -91,7 +82,7 @@ local function UpdateLicensePeds()
             FreezeEntityPosition(ped, true)
             SetEntityInvincible(ped, true)
             SetBlockingOfNonTemporaryEvents(ped, true)
-            TaskStartScenarioInPlace(ped, 'WORLD_HUMAN_CLIPBOARD', 0, true)            
+            TaskStartScenarioInPlace(ped, 'WORLD_HUMAN_CLIPBOARD', 0, true)       
       
             pedEntities[i] = ped
 
@@ -105,7 +96,29 @@ local function UpdateLicensePeds()
                 onSelect = function()
                     OpenBuyMenu(loc)
                 end,
-            })
+            })                            
+
+            if loc.useBlip then
+               -- print('Adding blip for location: ' .. loc.name)
+                blip = AddBlipForCoord(loc.location.x, loc.location.y, loc.location.z)
+                SetBlipSprite(blip, loc.blip.sprite)
+                SetBlipColour(blip, loc.blip.color)
+                SetBlipScale(blip, loc.blip.scale)
+                SetBlipAsMissionCreatorBlip(blip, true)
+                SetBlipAsShortRange(blip, true)
+                BeginTextCommandSetBlipName("STRING")
+                AddTextComponentString(loc.blip.name)
+                EndTextCommandSetBlipName(blip)
+            end   
+        elseif not canSell then
+            if pedEntities[i] then 
+                exports.ox_target:removeLocalEntity(pedEntities[i])
+                DeleteEntity(pedEntities[i])
+                if Config.useBlip and DoesBlipExist(blip) then
+                    RemoveBlip(blip)
+                end
+                pedEntities[i] = nil
+            end
         end    
     end
 end
@@ -114,7 +127,7 @@ UpdateLicensePeds()
 
 Citizen.CreateThread(function()
     while true do
-        Citizen.Wait(300000) 
+        Citizen.Wait(500) 
         UpdateLicensePeds()
     end
 end)

@@ -31,8 +31,17 @@ lib.callback.register('cornerstone_licenses:server:getCopCount', function(source
 end)
 
 local function checkCriminalRecord(citizenID)
-    print(citizenID)
-    local result = MySQL.query.await("SELECT * FROM `mdt_criminal_record` WHERE input LIKE '%Felony%' AND TYPE = 'Arrest' and  identifier = ?", { citizenID })
+
+    local result = nil
+
+    if SVConfig.MDT == 'al_mdt' then
+        result = MySQL.query.await("SELECT * FROM `mdt_criminal_record` WHERE input LIKE '%Felony%' AND TYPE = 'Arrest' and  identifier = ?", { citizenID })
+    elseif SVConfig.MDT == 'lb-tablet' then
+        result = MySQL.query.await("SELECT * from `lbtablet_police_cases_charges` where offence_id IN (select id from `lbtablet_police_offences` where class = 'felony') and criminal = ?", { citizenID })
+    else
+        TriggerClientEvent('cornerstone_sellshop:client:sendNotify', src, 'error', 'Your MDT is not supported, you will need to add support or disable felony check')   
+    end
+
     if result[1] then
         return true
     else
@@ -56,32 +65,35 @@ lib.callback.register('cornerstone_licenses:server:inquire', function(source, li
    
     local playerId = player.PlayerData.citizenid
     if not playerId then return end
-   
-    local isFelon = hasFelonies(playerId)
-   
-    if isFelon then
-       TriggerClientEvent('cornerstone_sellshop:client:sendNotify', src, 'error', 'You have a felony and cannot purchase this license.')
-    else        
-        if player then
-            local canPay = false
+
+    if SVConfig.CheckFelony then
+         local isFelon = hasFelonies(playerId)
+         if isFelon then
+            TriggerClientEvent('cornerstone_sellshop:client:sendNotify', src, 'error', 'You have a felony and cannot purchase this license.')
+            return
+        end  
+    end            
+
+    if player then
+        local canPay = false
             
-            local hasCash = false
+        local hasCash = false
 
-            hasCash = exports.ox_inventory:GetItemCount(src, 'money')
+        hasCash = exports.ox_inventory:GetItemCount(src, 'money')
 
-            canPay = hasCash >= 5000
+        canPay = hasCash >= 5000
 
-            if canPay then
+        if not canPay then return end
                 
-                local success = exports.ox_inventory:RemoveItem(src, 'money', 5000)
-                if success then
-                    local licenses = player.PlayerData.metadata['licences']
-                    licenses[license] = true
+        local success = exports.ox_inventory:RemoveItem(src, 'money', 5000)
 
-                    player.Functions.SetMetaData('licences', licenses)
-                    TriggerClientEvent('cornerstone_sellshop:client:sendNotify', src, 'success', 'You have been granted a ' ..  license .. ', you can pick up your paper copy at city hall.')
-                end
-            end
+        if not success then return end
+            local licenses = player.PlayerData.metadata['licences']
+            licenses[license] = true
+
+            player.Functions.SetMetaData('licences', licenses)
+            TriggerClientEvent('cornerstone_sellshop:client:sendNotify', src, 'success', 'You have been granted a ' ..  license .. ', you can pick up your paper copy at city hall.')
         end
-    end
+   
+    
 end)
