@@ -1,3 +1,5 @@
+local lastCopCount = 0
+
 lib.callback.register('cornerstone_licenses:server:getLicenseTypes', function(source, location)   
      return SVConfig.AvailableLicenses[location] or {}
 end)
@@ -22,10 +24,13 @@ lib.callback.register('cornerstone_licenses:server:hasLicense', function(source,
     return hasLicense(source, license)
 end)    
 
+local function GetCopCount(jobType) 
+    return  exports.qbx_core:GetDutyCountType(jobType)
+end
+
 lib.callback.register('cornerstone_licenses:server:getCopCount', function(source, jobType)
     local copCount = 0
-    copCount = exports.qbx_core:GetDutyCountType(jobType)
-
+    copCount = GetCopCount(jobType) 
     return copCount
    
 end)
@@ -96,4 +101,16 @@ lib.callback.register('cornerstone_licenses:server:inquire', function(source, li
         end
    
     
+end)
+
+CreateThread(function()
+    while true do
+        Wait(10000) -- Check every 30 seconds on server
+        local currentCopCount = GetCopCount('leo') -- Your existing function
+        
+        if math.abs(currentCopCount - lastCopCount) >= 1 then -- Only if count changed
+            TriggerClientEvent('cornerstone_licenses:client:updateCopCount', -1, currentCopCount)
+            lastCopCount = currentCopCount
+        end
+    end
 end)
