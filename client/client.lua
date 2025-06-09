@@ -1,15 +1,13 @@
 local pedEntities = {} 
-local blip = 0
+local blipEntities = {} --
 
 local function sendNotify(notifyType, message)
     exports.qbx_core:Notify('Background Check', notifyType, 5000, message, 'center-right')
 end
 
 RegisterNetEvent('cornerstone_sellshop:client:sendNotify')
-AddEventHandler('cornerstone_sellshop:client:sendNotify', function(notifyType, message)
-    
-    sendNotify(notifyType, message)
-    
+AddEventHandler('cornerstone_sellshop:client:sendNotify', function(notifyType, message)    
+    sendNotify(notifyType, message)    
 end)
 
 local function LoadModel(model)
@@ -17,8 +15,7 @@ local function LoadModel(model)
     local startTime = GetGameTimer()
     while not HasModelLoaded(model) do
         Wait(0)
-        if GetGameTimer() - startTime > 5000 then
-            
+        if GetGameTimer() - startTime > 5000 then            
             break
         end
     end
@@ -55,24 +52,25 @@ function OpenBuyMenu(loc)
             
         end
 
+    local contextId = 'OpenBuyMenu_' .. loc.name
+         
     lib.registerContext({
-        id = 'OpenBuyMenu',
+        id = contextId,
         title = "Purchase License",
         options = menu
     })
-    lib.showContext('OpenBuyMenu')
+    lib.showContext(contextId)
 end
 
-
-local function UpdateLicensePeds()
+local function UpdateLicensePeds(currentCopCount)
     if not pedEntities then pedEntities = {} end    
     
     for i = 1, #Config.Locations do
         local locationSettings = lib.callback.await('cornerstone_licenses:server:getLicenseTypes', false, Config.Locations[i].name)
-        local copCount = lib.callback.await('cornerstone_licenses:server:getCopCount', false, 'leo')
+        local copCount = currentCopCount
     
         local canSell = copCount <= locationSettings[i].cop_count            
-      
+        
         if canSell and not pedEntities[i] then
             local loc = Config.Locations[i]
             LoadModel(loc.pedModel)
@@ -83,7 +81,7 @@ local function UpdateLicensePeds()
             SetEntityInvincible(ped, true)
             SetBlockingOfNonTemporaryEvents(ped, true)
             TaskStartScenarioInPlace(ped, 'WORLD_HUMAN_CLIPBOARD', 0, true)       
-      
+            SetModelAsNoLongerNeeded(GetHashKey(loc.pedModel))
             pedEntities[i] = ped
 
             exports.ox_target:addLocalEntity(ped, {
@@ -98,36 +96,38 @@ local function UpdateLicensePeds()
                 end,
             })                            
 
-            if loc.useBlip then
-               -- print('Adding blip for location: ' .. loc.name)
-                blip = AddBlipForCoord(loc.location.x, loc.location.y, loc.location.z)
-                SetBlipSprite(blip, loc.blip.sprite)
-                SetBlipColour(blip, loc.blip.color)
-                SetBlipScale(blip, loc.blip.scale)
-                SetBlipAsMissionCreatorBlip(blip, true)
-                SetBlipAsShortRange(blip, true)
-                BeginTextCommandSetBlipName("STRING")
-                AddTextComponentString(loc.blip.name)
-                EndTextCommandSetBlipName(blip)
-            end   
+           if loc.useBlip then
+            local newBlip = AddBlipForCoord(loc.location.x, loc.location.y, loc.location.z)
+            SetBlipSprite(newBlip, loc.blip.sprite)
+            SetBlipColour(newBlip, loc.blip.color)
+            SetBlipScale(newBlip, loc.blip.scale)
+            SetBlipAsMissionCreatorBlip(newBlip, true)
+            SetBlipAsShortRange(newBlip, true)
+            BeginTextCommandSetBlipName("STRING")
+            AddTextComponentString(loc.blip.name)
+            EndTextCommandSetBlipName(newBlip)
+            blipEntities[i] = newBlip
+        end
         elseif not canSell then
             if pedEntities[i] then 
                 exports.ox_target:removeLocalEntity(pedEntities[i])
                 DeleteEntity(pedEntities[i])
-                if Config.useBlip and DoesBlipExist(blip) then
-                    RemoveBlip(blip)
+                if blipEntities[i] and DoesBlipExist(blipEntities[i]) then
+                    RemoveBlip(blipEntities[i])
                 end
                 pedEntities[i] = nil
+                blipEntities[i] = nil
             end
-        end    
+        end
     end
 end
 
-UpdateLicensePeds()
-
-Citizen.CreateThread(function()
-    while true do
-        Citizen.Wait(500) 
-        UpdateLicensePeds()
-    end
+RegisterNetEvent('cornerstone_licenses:client:updateCopCount')
+AddEventHandler('cornerstone_licenses:client:updateCopCount', function(copCount)
+    UpdateLicensePeds(copCount) -- Pass cop count to avoid callback
+end)
+CreateThread(function()
+    Wait(1000) -- Wait for player to fully load
+    local copCount = lib.callback.await('cornerstone_licenses:server:getCopCount', false, 'leo')
+    UpdateLicensePeds(copCount)
 end)
