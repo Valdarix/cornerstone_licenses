@@ -1,7 +1,7 @@
 SVConfig = {}
 
 
-SVConfig.CheckFelony = 'true' 
+SVConfig.CheckFelony = true
 SVConfig.MDT = 'lb-tablet' -- currently supports al_mdt, lb-tablet
 
 SVConfig.AvailableLicenses = {
