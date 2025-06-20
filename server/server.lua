@@ -80,17 +80,31 @@ lib.callback.register('cornerstone_licenses:server:inquire', function(source, li
     end
 
     if player then
+        local availableLicenses = SVConfig.AvailableLicenses
+        local licenseInfo
+
+        for _, licenses in pairs(availableLicenses) do
+            for i = 1, #licenses do
+                if licenses[i].name == license then
+                    licenseInfo = licenses[i]
+                    break
+                end
+            end
+            if licenseInfo then break end
+        end
+
+        if not licenseInfo then return end
+
+        local price = licenseInfo.cost or 0
         local canPay = false
-            
-        local hasCash = false
 
-        hasCash = exports.ox_inventory:GetItemCount(src, 'money')
+        local hasCash = exports.ox_inventory:GetItemCount(src, 'money')
 
-        canPay = hasCash >= 5000
+        canPay = hasCash >= price
 
         if not canPay then return end
-                
-        local success = exports.ox_inventory:RemoveItem(src, 'money', 5000)
+
+        local success = exports.ox_inventory:RemoveItem(src, 'money', price)
 
         if not success then return end
             local licenses = player.PlayerData.metadata['licences']
