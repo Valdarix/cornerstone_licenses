@@ -2,7 +2,7 @@ local pedEntities = {}
 local blipEntities = {} --
 
 local function sendNotify(notifyType, message)
-    exports.qbx_core:Notify('Background Check', notifyType, 5000, message, 'center-right')
+    lib.Notify('Background Check', notifyType, 5000, message, 'center-right')
 end
 
 RegisterNetEvent('cornerstone_sellshop:client:sendNotify')
