@@ -35,7 +35,7 @@ lib.callback.register('cornerstone_licenses:server:getCopCount', function(source
    
 end)
 
-local function checkCriminalRecord(citizenID)
+local function checkCriminalRecord(src, citizenID)
 
     local result = nil
 
@@ -44,7 +44,7 @@ local function checkCriminalRecord(citizenID)
     elseif SVConfig.MDT == 'lb-tablet' then
         result = MySQL.query.await("SELECT * from `lbtablet_police_cases_charges` where offence_id IN (select id from `lbtablet_police_offences` where class = 'felony') and criminal = ?", { citizenID })
     else
-        TriggerClientEvent('cornerstone_sellshop:client:sendNotify', src, 'error', 'Your MDT is not supported, you will need to add support or disable felony check')   
+        TriggerClientEvent('cornerstone_sellshop:client:sendNotify', src, 'error', 'Your MDT is not supported, you will need to add support or disable felony check')
     end
 
     if result[1] then
@@ -54,9 +54,9 @@ local function checkCriminalRecord(citizenID)
     end
 end
 
-local function hasFelonies(citizenID)
-    local felon = false    
-    felon = checkCriminalRecord(citizenID)          
+local function hasFelonies(src, citizenID)
+    local felon = false
+    felon = checkCriminalRecord(src, citizenID)
     return felon
 end
 
@@ -72,12 +72,12 @@ lib.callback.register('cornerstone_licenses:server:inquire', function(source, li
     if not playerId then return end
 
     if SVConfig.CheckFelony then
-         local isFelon = hasFelonies(playerId)
+         local isFelon = hasFelonies(src, playerId)
          if isFelon then
             TriggerClientEvent('cornerstone_sellshop:client:sendNotify', src, 'error', 'You have a felony and cannot purchase this license.')
             return
-        end  
-    end            
+        end
+    end
 
     if player then
         local canPay = false
