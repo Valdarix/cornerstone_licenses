@@ -1,6 +1,7 @@
 Config = Config or {}
 
--- Please use sv_config can be used to set prices and license types
+-- Locations only. Prices and license types are set in server/sv_config.lua; the key
+-- there must match each location's name here.
 Config.Locations = {
    [1] = {        
         name = 'paleto_sheriff',

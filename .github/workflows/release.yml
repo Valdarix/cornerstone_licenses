@@ -1,18 +1,18 @@
-name: Create Release on flag
+name: Create release when the commit message contains [release]
 on:
   push:
     branches: [ main ]
 
 jobs:
   release:
-    if: contains(github.event.head_commit.message, '-r')
+    if: contains(github.event.head_commit.message, '[release]')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: Extract version
         id: get_version
         run: |
-          VERSION=$(grep -oE "version '\d+\.\d+\.\d+'" fxmanifest.lua | cut -d"'" -f2)
+          VERSION=$(grep -oE "version '[0-9]+\.[0-9]+\.[0-9]+'" fxmanifest.lua | cut -d"'" -f2)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
       - name: Create Release
         uses: softprops/action-gh-release@v1

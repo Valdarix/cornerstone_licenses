@@ -4,24 +4,29 @@ game 'gta5'
 author 'Cornerstone Scripts'
 name "Cornerstone Grant Licenses"
 description 'A simple script to grant licenses to players when no cops are online'
-version '1.0.3'
+version '1.1.0'
 
 shared_scripts {
-    '@ox_lib/init.lua',   
+    '@ox_lib/init.lua',
     '@oxmysql/lib/MySQL.lua',
+    'client/cl_config.lua', -- locations are shared so the server can check where a buyer is standing
 }
 
 server_scripts {
-    'server/*.lua'
+    'server/sv_config.lua',
+    'server/server.lua',
 }
 
 client_scripts {
-    'client/*.lua',
+    'client/client.lua',
 }
 
-escrow_ignore {
-    'server/*.lua',
-    'client/*.lua',
+dependencies {
+    'ox_lib',
+    'oxmysql',
+    'ox_inventory',
+    'ox_target',
+    'qbx_core',
 }
 
 lua54 'yes'
