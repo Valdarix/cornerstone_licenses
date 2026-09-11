@@ -8,10 +8,12 @@
 local RESOURCE = GetCurrentResourceName()
 
 local SUPPORTED_MDT = { ['al_mdt'] = true, ['lb-tablet'] = true }
+local COOLDOWN_MS = 2000 -- matches the client's background-check progress bar
 
 local copCount = 0
 local refreshPending = false
-local inquiring = {} -- players with a purchase in progress, keyed by source
+local inquiring = {}   -- source -> true while a purchase is being processed
+local lastInquiry = {} -- source -> GetGameTimer() of the last accepted request
 
 -- ---------------------------------------------------------------------------
 -- Config lookups
@@ -65,11 +67,15 @@ local function scheduleRefresh()
     end)
 end
 
+-- Every qbx_core server event that can change who is on duty
+-- (names verified against qbx_core server/player.lua and docs.qbox.re)
 for _, eventName in ipairs({
-    'QBCore:Server:SetDuty', 'qbx_core:server:onSetDuty',
-    'QBCore:Server:OnJobUpdate', 'qbx_core:server:onJobUpdate',
-    'QBCore:Server:PlayerLoaded', 'qbx_core:server:playerLoaded',
-    'QBCore:Server:OnPlayerUnload', 'qbx_core:server:onPlayerUnload',
+    'QBCore:Server:SetDuty',          -- (source, onDuty)
+    'QBCore:Server:OnJobUpdate',      -- (source, job)
+    'qbx_core:server:onGroupUpdate',  -- (source, groupName, groupGrade)
+    'QBCore:Server:PlayerLoaded',     -- (player)
+    'QBCore:Server:OnPlayerUnload',   -- (source)
+    'qbx_core:server:playerLoggedOut',-- (source)
     'playerDropped',
 }) do
     AddEventHandler(eventName, scheduleRefresh)
@@ -77,6 +83,7 @@ end
 
 AddEventHandler('playerDropped', function()
     inquiring[source] = nil
+    lastInquiry[source] = nil
 end)
 
 CreateThread(function()
@@ -127,71 +134,79 @@ lib.callback.register('cornerstone_licenses:server:hasLicense', function(source,
     return player ~= nil and hasLicense(player, license)
 end)
 
-local function deny(message)
-    return { ok = false, message = message }
+local function deny(key, ...)
+    return { ok = false, message = locale(key, ...) }
 end
 
 local function inquire(src, locationName, licenseName)
     local player = exports.qbx_core:GetPlayer(src)
-    if not player then return deny('Player not found.') end
+    if not player then return deny('contact_admin') end
 
     local location = findLocation(locationName)
     local license = location and findLicense(locationName, licenseName)
     if not license then
-        return deny('That license is not available here.')
+        return deny('unavailable_here')
     end
 
     local ped = GetPlayerPed(src)
     local pos = location.location
     if ped == 0 or #(GetEntityCoords(ped) - vector3(pos.x, pos.y, pos.z)) > SVConfig.MaxDistance then
-        return deny('You need to be at the licensing desk.')
+        return deny('too_far')
     end
 
     -- Read fresh rather than trusting the cached broadcast value
     copCount = readCopCount()
     if not isSellable(license, copCount) then
-        return deny('Licensing is unavailable while police are on duty.')
+        return deny('police_on_duty')
     end
 
     if hasLicense(player, license.name) then
-        return deny('You already have this license, you can purchase your paper copy at city hall.')
+        return deny('already_owned')
     end
 
     if SVConfig.CheckFelony then
         if not SUPPORTED_MDT[SVConfig.MDT] then
             print(('[%s] SVConfig.MDT "%s" is not supported; set it to al_mdt or lb-tablet, or set SVConfig.CheckFelony = false'):format(RESOURCE, tostring(SVConfig.MDT)))
-            return deny('Licensing is unavailable right now, please contact an admin.')
+            return deny('contact_admin')
         end
         if hasFelony(player.PlayerData.citizenid) then
-            return deny('You have a felony and cannot purchase this license.')
+            return deny('felony')
         end
     end
 
     local price = tonumber(license.cost) or 0
-    if price > 0 then
-        local cash = exports.ox_inventory:GetItemCount(src, 'money') or 0
-        if cash < price or not exports.ox_inventory:RemoveItem(src, 'money', price) then
-            return deny(('You need $%s in cash for this license.'):format(price))
-        end
+    -- qbx_core keeps cash in sync with the ox_inventory money item, refuses to
+    -- go negative, and writes its own money log
+    if price > 0 and not player.Functions.RemoveMoney('cash', price, 'license:' .. license.name) then
+        return deny('not_enough_cash', price)
     end
 
     local licences = player.PlayerData.metadata.licences or {}
     licences[license.name] = true
     player.Functions.SetMetaData('licences', licences)
 
-    return { ok = true, message = ('You have been granted a %s, you can pick up your paper copy at city hall.'):format(license.label or license.name) }
+    lib.logger(src, 'license_granted', ('%s granted for $%s at %s'):format(license.name, price, locationName),
+        'citizenid:' .. tostring(player.PlayerData.citizenid), 'license:' .. license.name, 'location:' .. locationName)
+
+    return { ok = true, message = locale('granted', license.label or license.name) }
 end
 
 lib.callback.register('cornerstone_licenses:server:inquire', function(source, locationName, licenseName)
     if inquiring[source] then
-        return deny('Your background check is still running.')
+        return deny('in_progress')
     end
+    local now = GetGameTimer()
+    if lastInquiry[source] and now - lastInquiry[source] < COOLDOWN_MS then
+        return deny('too_soon')
+    end
+    lastInquiry[source] = now
+
     inquiring[source] = true
     local ok, result = pcall(inquire, source, locationName, licenseName)
     inquiring[source] = nil
     if not ok then
         print(('[%s] inquire failed for %s: %s'):format(RESOURCE, source, tostring(result)))
-        return deny('Licensing is unavailable right now, please contact an admin.')
+        return deny('contact_admin')
     end
     return result
 end)

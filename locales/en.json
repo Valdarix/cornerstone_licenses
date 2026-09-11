@@ -1,0 +1,18 @@
+{
+    "notify_title": "Background Check",
+    "menu_title": "Purchase License",
+    "menu_price": "%s - $%s",
+    "progress_label": "Performing background check...",
+    "none_available": "No licenses are available while police are on duty.",
+    "no_answer": "No answer from the server, please try again.",
+    "in_progress": "Your background check is still running.",
+    "too_soon": "Please wait a moment before trying again.",
+    "unavailable_here": "That license is not available here.",
+    "too_far": "You need to be at the licensing desk.",
+    "police_on_duty": "Licensing is unavailable while police are on duty.",
+    "already_owned": "You already have this license, you can purchase your paper copy at city hall.",
+    "felony": "You have a felony and cannot purchase this license.",
+    "contact_admin": "Licensing is unavailable right now, please contact an admin.",
+    "not_enough_cash": "You need $%s in cash for this license.",
+    "granted": "You have been granted a %s, you can pick up your paper copy at city hall."
+}

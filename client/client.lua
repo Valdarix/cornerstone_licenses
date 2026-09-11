@@ -11,17 +11,13 @@ local updateSeq = 0      -- bumps on every update so a stale update stops itself
 
 local function notify(notifyType, message)
     lib.notify({
-        title = 'Background Check',
+        title = locale('notify_title'),
         description = message,
         type = notifyType,
         duration = 5000,
         position = 'center-right',
     })
 end
-
-RegisterNetEvent('cornerstone_licenses:client:notify', function(notifyType, message)
-    notify(notifyType, message)
-end)
 
 local function getLicenses(locationName)
     if not licenseCache[locationName] then
@@ -61,7 +57,7 @@ end
 local function purchase(loc, license)
     local finished = lib.progressBar({
         duration = 2000,
-        label = 'Performing background check...',
+        label = locale('progress_label'),
         useWhileDead = false,
         canCancel = true,
     })
@@ -69,16 +65,20 @@ local function purchase(loc, license)
 
     local result = lib.callback.await('cornerstone_licenses:server:inquire', false, loc.name, license.name)
     if not result then
-        notify('error', 'No answer from the server, please try again.')
+        notify('error', locale('no_answer'))
         return
     end
     notify(result.ok and 'success' or 'error', result.message)
 end
 
+local function menuId(loc)
+    return 'cornerstone_licenses_' .. loc.name
+end
+
 function OpenBuyMenu(loc)
     local licenses = sellableLicenses(loc.name, copCount)
     if #licenses == 0 then
-        notify('inform', 'No licenses are available while police are on duty.')
+        notify('inform', locale('none_available'))
         return
     end
 
@@ -86,7 +86,7 @@ function OpenBuyMenu(loc)
     for _, license in ipairs(licenses) do
         options[#options + 1] = {
             title = license.label,
-            description = ('%s - $%s'):format(license.description or '', license.cost or 0),
+            description = locale('menu_price', license.description or '', license.cost or 0),
             icon = license.icon,
             onSelect = function()
                 purchase(loc, license)
@@ -94,13 +94,13 @@ function OpenBuyMenu(loc)
         }
     end
 
-    local contextId = 'OpenBuyMenu_' .. loc.name
+    local id = menuId(loc)
     lib.registerContext({
-        id = contextId,
-        title = 'Purchase License',
+        id = id,
+        title = locale('menu_title'),
         options = options,
     })
-    lib.showContext(contextId)
+    lib.showContext(id)
 end
 
 -- ---------------------------------------------------------------------------
@@ -108,12 +108,18 @@ end
 -- ---------------------------------------------------------------------------
 
 local function despawn(i)
+    local loc = Config.Locations[i]
+    if loc and lib.getOpenContextMenu() == menuId(loc) then
+        lib.hideContext(true) -- the desk just closed under the player's menu
+    end
+
     local ped = peds[i]
     if type(ped) == 'number' then
         exports.ox_target:removeLocalEntity(ped)
         if DoesEntityExist(ped) then DeleteEntity(ped) end
     end
     peds[i] = nil
+
     if blips[i] and DoesBlipExist(blips[i]) then
         RemoveBlip(blips[i])
     end
@@ -151,6 +157,9 @@ local function spawn(i, loc)
             description = loc.description,
             iconColor = 'green',
             distance = 2.0,
+            canInteract = function()
+                return not IsPedDeadOrDying(cache.ped, true)
+            end,
             onSelect = function()
                 OpenBuyMenu(loc)
             end,
@@ -162,13 +171,16 @@ local function spawn(i, loc)
         SetBlipSprite(blip, loc.blip.sprite or 110)
         SetBlipColour(blip, loc.blip.color or 1)
         SetBlipScale(blip, loc.blip.scale or 0.8)
-        SetBlipAsMissionCreatorBlip(blip, true)
         SetBlipAsShortRange(blip, true)
         BeginTextCommandSetBlipName('STRING')
         AddTextComponentString(loc.blip.name or loc.label)
         EndTextCommandSetBlipName(blip)
         blips[i] = blip
     end
+end
+
+local function despawnAll()
+    for i in pairs(peds) do despawn(i) end
 end
 
 local function applyCopCount(count)
@@ -189,19 +201,29 @@ local function applyCopCount(count)
     end
 end
 
+local function resync()
+    local count = lib.callback.await('cornerstone_licenses:server:getCopCount', false)
+    applyCopCount(count)
+end
+
 RegisterNetEvent('cornerstone_licenses:client:updateCopCount', function(count)
     applyCopCount(count)
 end)
 
+-- Character selected (also fires after a relog); the server count may have moved meanwhile
+AddEventHandler('QBCore:Client:OnPlayerLoaded', resync)
+
+-- Back to character selection: nothing should be left in the world
+RegisterNetEvent('qbx_core:client:playerLoggedOut', despawnAll)
+
 AddEventHandler('onResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
-    for i in pairs(peds) do despawn(i) end
+    despawnAll()
 end)
 
+-- Resource (re)started while already in game
 CreateThread(function()
-    while not LocalPlayer.state.isLoggedIn do
-        Wait(500)
+    if LocalPlayer.state.isLoggedIn then
+        resync()
     end
-    local count = lib.callback.await('cornerstone_licenses:server:getCopCount', false)
-    applyCopCount(count)
 end)

@@ -15,6 +15,8 @@ A simple script to setup grant license for Qbox when no police are online. This 
 
 The location names must match between the two files; the server console warns at startup if they do not.
 
+Player-facing text is in `locales/en.json`. Copy it to `locales/<lang>.json` and set ox_lib's `ox:locale` convar to translate it. Granted licenses are logged through ox_lib's logger and cash is taken through Qbox, so both show up in your existing logs.
+
 ## Dependencies
 - Ox lib
 - Ox Target

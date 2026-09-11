@@ -27,3 +27,9 @@ Initial Release
 - The police job type and the purchase distance are configurable.
 - Startup warns about location and license names that do not match between the two config files.
 - Release workflow fixed: it now reads the version correctly and triggers on [release] in the commit message.
+- Cash is taken through Qbox itself, so purchases appear in the Qbox money log and respect its rules.
+- Every granted license is written to the ox_lib logger (Discord, Datadog, Loki or Fivemanage, whichever the server uses).
+- A player can only start one background check every two seconds.
+- All player-facing text lives in locales/en.json and can be translated with ox_lib's locale setting.
+- The menu closes by itself if police come on duty while it is open.
+- The ped cannot be used while dead, and everything is cleared when the player returns to character selection.

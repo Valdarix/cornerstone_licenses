@@ -6,6 +6,8 @@ name "Cornerstone Grant Licenses"
 description 'A simple script to grant licenses to players when no cops are online'
 version '1.1.0'
 
+ox_lib 'locale'
+
 shared_scripts {
     '@ox_lib/init.lua',
     '@oxmysql/lib/MySQL.lua',
@@ -21,10 +23,13 @@ client_scripts {
     'client/client.lua',
 }
 
+files {
+    'locales/*.json',
+}
+
 dependencies {
     'ox_lib',
     'oxmysql',
-    'ox_inventory',
     'ox_target',
     'qbx_core',
 }
