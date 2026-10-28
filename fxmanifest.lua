@@ -4,7 +4,7 @@ game 'gta5'
 author 'Cornerstone Scripts'
 name 'Cornerstone - Licenses'
 description 'Lets players buy licenses from a desk clerk ped while few or no police are on duty.'
-version '1.1.3'
+version '1.1.4'
 
 ox_lib 'locale'
 
