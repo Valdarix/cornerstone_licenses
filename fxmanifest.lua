@@ -4,7 +4,7 @@ game 'gta5'
 author 'Cornerstone Scripts'
 name "Cornerstone Grant Licenses"
 description 'A simple script to grant licenses to players when no cops are online'
-version '1.1.0'
+version '1.1.1'
 
 ox_lib 'locale'
 
