@@ -2,8 +2,8 @@ fx_version 'cerulean'
 game 'gta5'
 
 author 'Cornerstone Scripts'
-name "Cornerstone Grant Licenses"
-description 'A simple script to grant licenses to players when no cops are online'
+name 'Cornerstone - Licenses'
+description 'Lets players buy licenses from a desk clerk ped while few or no police are on duty.'
 version '1.1.3'
 
 ox_lib 'locale'
@@ -32,6 +32,11 @@ dependencies {
     'oxmysql',
     'ox_target',
     'qbx_core',
+}
+
+escrow_ignore {
+    'client/cl_config.lua',
+    'server/sv_config.lua',
 }
 
 lua54 'yes'

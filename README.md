@@ -1,33 +1,37 @@
-# Cornerstone: Licenses
+# Cornerstone - Licenses
 
-## Description
-A simple script to setup grant license for Qbox when no police are online. This script will only grant the player a license, they will still need to purchase the hard copy at a City Hall or some other script.
+A licensing desk for Qbox servers. Players buy a license such as a weapon license from a clerk ped,
+but only while few enough police are on duty.
 
-## Features
-- Provide players a weapon license while no police are on line
-- Optionally check if the player is a felon and deny the license if they are (al_mdt or lb-tablet)
-- Set the maximum police on duty per license; the ped only appears when a license can be sold
-- Every purchase is verified on the server (location, distance, police count, ownership, felony, cash)
+## What it is
 
-## Configuration
-- `client/cl_config.lua` — locations, ped model, blip
-- `server/sv_config.lua` — licenses and prices per location, police job type, felony check and MDT, purchase distance
+A clerk stands at each configured location. When police on duty are at or below a license's limit,
+the clerk is there and sells it. When too many police are on duty, the clerk and the map blip
+disappear. The script sets the license on the character only: the player still gets the physical
+copy from a City Hall or another script.
 
-The location names must match between the two files; the server console warns at startup if they do not.
+## How it plays
 
-Player-facing text is in `locales/en.json`. Copy it to `locales/<lang>.json` and set ox_lib's `ox:locale` convar to translate it. Granted licenses are logged through ox_lib's logger and cash is taken through Qbox, so both show up in your existing logs.
+1. Find the clerk (on the map as a blip if the location has one) and use the target on the ped.
+2. Pick a license from the menu. Only licenses sold right now are listed, each with its price.
+3. A short background check runs (about two seconds). You can cancel it.
+4. The price is taken in cash and the license is added to your character. A felony on record
+   (when the server checks it) or a license you already hold stops the purchase, and you are told
+   why.
 
-## Dependencies
-- Ox lib
-- Ox Target
-- Ox Inventory
-- oxmysql
-- Qbox
+You must be standing at the desk when the purchase goes through.
 
-## Support
+## Commands and keybinds
 
-Documentation | https://cornerstonedev.gitbook.io/docs/free-scripts/offline-weapon-license-qbox
+| command or key | what it does |
+|---|---|
+| none | The script has no commands or keybinds. Use the target option on the clerk. |
 
-There is no support for this script. It was written for use with Ox inventory on a QBox server and will not be updated to support other inventories of frameworks. You are free to make those changes yourself. 
+## Credit
 
-It's crap code, created to serve a singular purpose.
+Released under the GNU General Public License v3.0 (`LICENSE.md`).
+
+Documentation: https://cornerstonedev.gitbook.io/docs/free-scripts/offline-weapon-license-qbox
+
+There is no support for this script. It was written for Qbox with ox_inventory and is not updated
+for other frameworks or inventories. You are free to change it yourself under the licence.
